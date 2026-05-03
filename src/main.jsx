@@ -100,7 +100,7 @@ function Pill({ children, className }) {
 
 function Stars({ value }) {
   return (
-    <div className="flex items-center gap-0.5" aria-label={`Importance ${value} out of 5`}>
+    <div className="flex items-center gap-0.5" aria-label={`중요도 ${value} / 5`}>
       {Array.from({ length: 5 }).map((_, index) => (
         <Star key={index} className={cls('h-4 w-4', index < value ? 'fill-amber-300 text-amber-300' : 'text-zinc-700')} />
       ))}
@@ -143,7 +143,7 @@ function ItemCard({ item, selected, onClick }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="font-semibold text-zinc-100">{item.name}</div>
-          <div className="mt-1 text-xs text-zinc-500">{item.category} · from {item.craftableFromTier}</div>
+          <div className="mt-1 text-xs text-zinc-500">{item.category} · 제작 가능: {item.craftableFromTier}</div>
         </div>
         <ChevronRight className="mt-1 h-4 w-4 text-zinc-600 transition group-hover:translate-x-0.5 group-hover:text-zinc-300" />
       </div>
@@ -166,10 +166,10 @@ function TreeNode({ node, level = 0 }) {
           </div>
           {node.recipe ? (
             <div className="mt-1 text-xs text-zinc-500">
-              via {node.recipe.machine} · {node.recipe.tier}{node.recipe.tags?.includes('placeholder') ? ' · placeholder' : ''}
+              경로: {node.recipe.machine} · {node.recipe.tier}{node.recipe.tags?.includes('placeholder') ? ' · placeholder' : ''}
             </div>
           ) : (
-            <div className="mt-1 text-xs text-zinc-600">base material / no route in current dataset</div>
+            <div className="mt-1 text-xs text-zinc-600">기초 재료 / 현재 데이터셋에 하위 경로 없음</div>
           )}
         </div>
       </div>
@@ -183,7 +183,7 @@ function TreeNode({ node, level = 0 }) {
 function App() {
   const [query, setQuery] = useState('')
   const [tier, setTier] = useState('LV')
-  const [category, setCategory] = useState('All')
+  const [category, setCategory] = useState('전체')
   const [ownedMachines, setOwnedMachines] = useState(['Wiremill', 'Lathe', 'Assembler'])
   const [selectedItemId, setSelectedItemId] = useState('lv_electric_motor')
   const [amount, setAmount] = useState(16)
@@ -206,12 +206,12 @@ function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ tier, ownedMachines, selectedItemId, amount }))
   }, [tier, ownedMachines, selectedItemId, amount])
 
-  const categories = useMemo(() => ['All', ...Array.from(new Set(items.map((item) => item.category)))], [])
+  const categories = useMemo(() => ['전체', ...Array.from(new Set(items.map((item) => item.category)))], [])
 
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase()
     return items
-      .filter((item) => category === 'All' || item.category === category)
+      .filter((item) => category === '전체' || item.category === category)
       .filter((item) => !q || item.name.toLowerCase().includes(q) || item.tags.join(' ').toLowerCase().includes(q))
       .filter((item) => tierRank[item.craftableFromTier] <= tierRank[tier] + 1)
       .sort((a, b) => b.importance - a.importance || tierRank[a.craftableFromTier] - tierRank[b.craftableFromTier])
@@ -239,21 +239,21 @@ function App() {
                 <Factory className="h-4 w-4" /> GTNH Helper v0.1
               </div>
               <h1 className="max-w-4xl text-4xl font-black tracking-tight text-white md:text-6xl">
-                Tier-aware item guide and recipe planner
+                티어 기반 아이템 가이드 & 레시피 플래너
               </h1>
               <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-400 md:text-base">
-                Search key GregTech: New Horizons items, check when they become useful, and generate a small material tree from your current tier and machines.
+                GregTech: New Horizons의 핵심 아이템을 검색하고, 언제부터 만들 수 있는지와 언제부터 유용한지 확인한 뒤, 현재 티어와 보유 기계 기준으로 간단한 재료 트리를 생성합니다.
               </p>
             </div>
             <div className="grid gap-3 rounded-3xl border border-zinc-800 bg-zinc-900/70 p-4 sm:grid-cols-2 lg:w-[420px]">
               <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Current tier
+                현재 티어
                 <select value={tier} onChange={(event) => setTier(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-emerald-400">
                   {TIERS.map((name) => <option key={name}>{name}</option>)}
                 </select>
               </label>
               <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Target amount
+                목표 개수
                 <input type="number" min="1" value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-emerald-400" />
               </label>
             </div>
@@ -264,12 +264,12 @@ function App() {
           <aside className="space-y-6">
             <section className="rounded-[2rem] border border-zinc-800 bg-zinc-950/70 p-5 shadow-xl shadow-black/20 backdrop-blur">
               <div className="mb-4 flex items-center gap-2 font-bold">
-                <Search className="h-5 w-5 text-emerald-300" /> Search
+                <Search className="h-5 w-5 text-emerald-300" /> 검색
               </div>
               <div className="space-y-3">
                 <div className="relative">
                   <PackageSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" />
-                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="motor, cable, circuit..." className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 py-3 pl-10 pr-3 text-sm outline-none transition focus:border-emerald-400" />
+                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="motor, cable, circuit, 회로..." className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 py-3 pl-10 pr-3 text-sm outline-none transition focus:border-emerald-400" />
                 </div>
                 <select value={category} onChange={(event) => setCategory(event.target.value)} className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-3 text-sm outline-none transition focus:border-emerald-400">
                   {categories.map((name) => <option key={name}>{name}</option>)}
@@ -279,8 +279,8 @@ function App() {
 
             <section className="rounded-[2rem] border border-zinc-800 bg-zinc-950/70 p-5 shadow-xl shadow-black/20 backdrop-blur">
               <div className="mb-4 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 font-bold"><Hammer className="h-5 w-5 text-emerald-300" /> Machines</div>
-                <span className="text-xs text-zinc-500">{ownedMachines.length} selected</span>
+                <div className="flex items-center gap-2 font-bold"><Hammer className="h-5 w-5 text-emerald-300" /> 보유 기계</div>
+                <span className="text-xs text-zinc-500">{ownedMachines.length}개 선택됨</span>
               </div>
               <div className="grid gap-2">
                 {MACHINES.map((machine) => (
@@ -291,7 +291,7 @@ function App() {
 
             <section className="rounded-[2rem] border border-zinc-800 bg-zinc-950/70 p-5 shadow-xl shadow-black/20 backdrop-blur">
               <div className="mb-4 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 font-bold"><Boxes className="h-5 w-5 text-emerald-300" /> Items</div>
+                <div className="flex items-center gap-2 font-bold"><Boxes className="h-5 w-5 text-emerald-300" /> 아이템</div>
                 <span className="text-xs text-zinc-500">{filteredItems.length}</span>
               </div>
               <div className="scrollbar-thin max-h-[520px] space-y-3 overflow-y-auto pr-1">
@@ -308,15 +308,15 @@ function App() {
                 <div>
                   <div className="mb-4 flex flex-wrap gap-2">
                     <Pill>{selectedItem.category}</Pill>
-                    <Pill>Craftable: {selectedItem.craftableFromTier}</Pill>
-                    <Pill>Recommended: {selectedItem.recommendedFromTier}</Pill>
-                    <Pill>Automate: {selectedItem.automationFromTier}</Pill>
+                    <Pill>제작 가능: {selectedItem.craftableFromTier}</Pill>
+                    <Pill>추천 시작: {selectedItem.recommendedFromTier}</Pill>
+                    <Pill>자동화 추천: {selectedItem.automationFromTier}</Pill>
                   </div>
                   <h2 className="text-3xl font-black tracking-tight text-white md:text-5xl">{selectedItem.name}</h2>
                   <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-300 md:text-base">{selectedItem.summary}</p>
                 </div>
                 <div className="min-w-[180px] rounded-3xl border border-zinc-800 bg-zinc-900/70 p-4">
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-500">Importance</div>
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-500">중요도</div>
                   <Stars value={selectedItem.importance} />
                 </div>
               </div>
@@ -324,23 +324,23 @@ function App() {
               {!canCraft && (
                 <div className="mt-5 flex gap-3 rounded-3xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
                   <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
-                  <div>Your selected tier is <b>{tier}</b>, but this item is normally craftable from <b>{selectedItem.craftableFromTier}</b>.</div>
+                  <div>현재 선택한 티어는 <b>{tier}</b>이지만, 이 아이템은 보통 <b>{selectedItem.craftableFromTier}</b>부터 제작 가능합니다.</div>
                 </div>
               )}
 
               <div className="mt-6 grid gap-4 md:grid-cols-3">
                 <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-4">
-                  <div className="mb-3 flex items-center gap-2 font-bold"><Sparkles className="h-4 w-4 text-emerald-300" /> Common uses</div>
+                  <div className="mb-3 flex items-center gap-2 font-bold"><Sparkles className="h-4 w-4 text-emerald-300" /> 주요 사용처</div>
                   <ul className="space-y-2 text-sm text-zinc-300">
                     {selectedItem.uses.map((use) => <li key={use}>• {use}</li>)}
                   </ul>
                 </div>
                 <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-4">
-                  <div className="mb-3 flex items-center gap-2 font-bold"><ShieldCheck className="h-4 w-4 text-emerald-300" /> Stock plan</div>
+                  <div className="mb-3 flex items-center gap-2 font-bold"><ShieldCheck className="h-4 w-4 text-emerald-300" /> 비축 가이드</div>
                   <p className="text-sm leading-6 text-zinc-300">{selectedItem.stock}</p>
                 </div>
                 <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-4">
-                  <div className="mb-3 flex items-center gap-2 font-bold"><Info className="h-4 w-4 text-emerald-300" /> Note</div>
+                  <div className="mb-3 flex items-center gap-2 font-bold"><Info className="h-4 w-4 text-emerald-300" /> 주의사항</div>
                   <p className="text-sm leading-6 text-zinc-300">{selectedItem.warning}</p>
                 </div>
               </div>
@@ -350,10 +350,10 @@ function App() {
               <div className="rounded-[2rem] border border-zinc-800 bg-zinc-950/70 p-6 shadow-xl shadow-black/20 backdrop-blur">
                 <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <div className="flex items-center gap-2 font-bold"><GitBranch className="h-5 w-5 text-emerald-300" /> Recipe tree</div>
-                    <p className="mt-2 text-sm text-zinc-500">Chooses a simple route from the current tier and selected machines.</p>
+                    <div className="flex items-center gap-2 font-bold"><GitBranch className="h-5 w-5 text-emerald-300" /> 레시피 트리</div>
+                    <p className="mt-2 text-sm text-zinc-500">현재 티어와 선택한 기계를 기준으로 사용 가능한 간단한 제작 경로를 선택합니다.</p>
                   </div>
-                  {placeholderCount > 0 && <Pill className="border-amber-400/30 bg-amber-400/10 text-amber-100">{placeholderCount} placeholder recipe(s)</Pill>}
+                  {placeholderCount > 0 && <Pill className="border-amber-400/30 bg-amber-400/10 text-amber-100">placeholder 레시피 {placeholderCount}개</Pill>}
                 </div>
                 <div className="rounded-3xl border border-zinc-800 bg-zinc-900/50 p-4">
                   <TreeNode node={tree} />
@@ -362,7 +362,7 @@ function App() {
 
               <div className="space-y-6">
                 <div className="rounded-[2rem] border border-zinc-800 bg-zinc-950/70 p-5 shadow-xl shadow-black/20 backdrop-blur">
-                  <div className="mb-4 flex items-center gap-2 font-bold"><Flame className="h-5 w-5 text-emerald-300" /> Base materials</div>
+                  <div className="mb-4 flex items-center gap-2 font-bold"><Flame className="h-5 w-5 text-emerald-300" /> 기초 재료 합산</div>
                   <div className="space-y-2">
                     {Object.entries(rawMaterials).map(([id, count]) => (
                       <div key={id} className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm">
@@ -374,9 +374,9 @@ function App() {
                 </div>
 
                 <div className="rounded-[2rem] border border-zinc-800 bg-zinc-950/70 p-5 shadow-xl shadow-black/20 backdrop-blur">
-                  <div className="mb-4 flex items-center gap-2 font-bold"><Settings2 className="h-5 w-5 text-emerald-300" /> Required machines</div>
+                  <div className="mb-4 flex items-center gap-2 font-bold"><Settings2 className="h-5 w-5 text-emerald-300" /> 필요한 기계</div>
                   <div className="space-y-2">
-                    {machines.length === 0 ? <div className="text-sm text-zinc-500">No recipe route in current dataset.</div> : machines.map((machine) => {
+                    {machines.length === 0 ? <div className="text-sm text-zinc-500">현재 데이터셋에 레시피 경로가 없습니다.</div> : machines.map((machine) => {
                       const owned = ownedMachines.includes(machine) || machine.includes('Manual')
                       return (
                         <div key={machine} className={cls('rounded-2xl border px-3 py-2 text-sm', owned ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100' : 'border-amber-400/30 bg-amber-400/10 text-amber-100')}>

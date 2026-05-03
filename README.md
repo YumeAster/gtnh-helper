@@ -1,33 +1,32 @@
 # GTNH Helper
 
-A Vite + React + Tailwind prototype for a GregTech: New Horizons helper web app.
+Vite + React + Tailwind 기반의 GregTech: New Horizons 플레이 보조 웹앱 프로토타입입니다.
 
-## Local development
+## 로컬 실행
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Build
+## 빌드 확인
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## GitHub Pages deployment
+## GitHub Pages 배포
 
-This repository includes `.github/workflows/deploy.yml`.
+이 프로젝트에는 `.github/workflows/deploy.yml`이 포함되어 있습니다.
 
-1. Push the whole project to the `main` branch.
-2. Open the repository on GitHub.
-3. Go to **Settings → Pages**.
-4. Set **Build and deployment → Source** to **GitHub Actions**.
-5. Open the **Actions** tab and wait for `Deploy to GitHub Pages` to succeed.
+1. 프로젝트 전체를 GitHub 저장소의 `main` 브랜치에 push합니다.
+2. GitHub 저장소에서 **Settings → Pages**로 이동합니다.
+3. **Build and deployment → Source**를 **GitHub Actions**로 설정합니다.
+4. **Actions** 탭에서 `Deploy to GitHub Pages`가 성공하는지 확인합니다.
 
-The Vite `base` option is set to `./`, so the app should work even if the repository name changes.
+Vite `base` 옵션은 `./`로 설정되어 있어서 저장소 이름이 바뀌어도 경로가 비교적 덜 꼬입니다.
 
-## Current limitations
+## 현재 한계
 
-Some recipe entries are placeholders. Treat the calculator as a UI/data-structure prototype until the recipe data is verified against your GTNH pack version.
+일부 레시피는 placeholder입니다. 계산 결과를 실제 플레이 기준으로 믿기 전에, 사용 중인 GTNH 팩 버전의 레시피와 대조해서 검증해야 합니다.
