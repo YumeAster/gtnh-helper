@@ -1,553 +1,398 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { createRoot } from "react-dom/client";
-import { Search, Settings2, Package, Hammer, Boxes, Star, AlertTriangle, ChevronRight, TreePine, Save } from "lucide-react";
-import "./styles.css";
+import React, { useEffect, useMemo, useState } from 'react'
+import { createRoot } from 'react-dom/client'
+import {
+  AlertTriangle,
+  Boxes,
+  Check,
+  ChevronRight,
+  CircleDot,
+  Factory,
+  Flame,
+  GitBranch,
+  Hammer,
+  Info,
+  PackageSearch,
+  Search,
+  Settings2,
+  ShieldCheck,
+  Sparkles,
+  Star,
+} from 'lucide-react'
+import './index.css'
+import { MACHINES, TIERS, items, rawItems, recipes, tierRank } from './data.js'
 
-const TIERS = ["Stone Age", "Steam", "LV", "MV", "HV"];
+const STORAGE_KEY = 'gtnh-helper-vite-tailwind-state'
 
-const MACHINES = [
-  "Forge Hammer",
-  "Wiremill",
-  "Lathe",
-  "Compressor",
-  "Bending Machine",
-  "Assembler",
-  "Extractor",
-  "Alloy Smelter",
-  "Macerator",
-];
-
-const tierRank = Object.fromEntries(TIERS.map((tier, index) => [tier, index]));
-
-const items = [
-  {
-    id: "steel_ingot",
-    name: "Steel Ingot",
-    category: "Material",
-    craftableFromTier: "Steam",
-    recommendedFromTier: "Steam",
-    automationFromTier: "LV",
-    importance: 5,
-    summary: "Steam to LV progression depends heavily on steel. Many machines, plates, rods, and EBF parts eventually consume it.",
-    commonUses: ["Steam machines", "LV Machine Hull", "EBF preparation", "Plates, rods, screws"],
-    stock: "Steam: keep several stacks if possible. LV: start semi-automating plates and rods.",
-    warnings: ["Steel demand rises sharply before EBF and MV preparation."],
-    tags: ["core", "frequent", "material"],
-  },
-  {
-    id: "rubber",
-    name: "Rubber",
-    category: "Material",
-    craftableFromTier: "Steam",
-    recommendedFromTier: "Steam",
-    automationFromTier: "LV",
-    importance: 5,
-    summary: "A basic but constantly consumed material for cables, circuits, and early electric components.",
-    commonUses: ["Tin Cable", "Copper Cable", "Circuits", "Electric components"],
-    stock: "Steam/LV: keep at least 1~2 stacks. LV onward: automate extraction if possible.",
-    warnings: ["Running out of rubber slows almost every early electric crafting chain."],
-    tags: ["core", "frequent", "material"],
-  },
-  {
-    id: "copper_wire",
-    name: "Copper Wire",
-    category: "Wire",
-    craftableFromTier: "Steam",
-    recommendedFromTier: "LV",
-    automationFromTier: "LV",
-    importance: 5,
-    summary: "A frequent wire component used in motors, circuits, and early machine parts.",
-    commonUses: ["LV Electric Motor", "Basic Circuit", "Coils", "Cables"],
-    stock: "LV: produce by Wiremill whenever possible.",
-    warnings: ["Crafting wires manually is usually much less efficient than Wiremill processing."],
-    tags: ["core", "wire", "frequent"],
-  },
-  {
-    id: "tin_wire",
-    name: "Tin Wire",
-    category: "Wire",
-    craftableFromTier: "Steam",
-    recommendedFromTier: "LV",
-    automationFromTier: "LV",
-    importance: 4,
-    summary: "Used mainly for early cables and LV component chains.",
-    commonUses: ["Tin Cable", "LV power lines", "LV Electric Motor"],
-    stock: "LV: make as needed, but keep extra if many machines are planned.",
-    warnings: ["Wiremill greatly improves material efficiency."],
-    tags: ["wire", "frequent"],
-  },
-  {
-    id: "tin_cable",
-    name: "Tin Cable",
-    category: "Cable",
-    craftableFromTier: "LV",
-    recommendedFromTier: "LV",
-    automationFromTier: "LV",
-    importance: 5,
-    summary: "The standard early cable and a common ingredient in LV components.",
-    commonUses: ["LV Electric Motor", "LV machines", "LV power routing"],
-    stock: "LV: keep 32~64 for machine expansion.",
-    warnings: ["Cable demand spikes when building several LV machines at once."],
-    tags: ["core", "cable", "frequent"],
-  },
-  {
-    id: "iron_rod",
-    name: "Iron Rod",
-    category: "Component",
-    craftableFromTier: "Steam",
-    recommendedFromTier: "Steam",
-    automationFromTier: "LV",
-    importance: 4,
-    summary: "A basic component used by motors, pistons, tools, and many early recipes.",
-    commonUses: ["LV Electric Motor", "Pistons", "Tools", "Machine components"],
-    stock: "Steam/LV: keep a small buffer. Lathe route is preferred when available.",
-    warnings: ["Manual crafting is acceptable early, but repetitive later."],
-    tags: ["component", "frequent"],
-  },
-  {
-    id: "magnetic_iron_rod",
-    name: "Magnetic Iron Rod",
-    category: "Component",
-    craftableFromTier: "LV",
-    recommendedFromTier: "LV",
-    automationFromTier: "LV",
-    importance: 4,
-    summary: "A required part for LV Electric Motors and related electric components.",
-    commonUses: ["LV Electric Motor", "Electric components"],
-    stock: "LV: make in batches alongside motor production.",
-    warnings: ["Usually appears as a sub-step inside motor crafting."],
-    tags: ["component", "frequent"],
-  },
-  {
-    id: "lv_electric_motor",
-    name: "LV Electric Motor",
-    category: "Component",
-    craftableFromTier: "LV",
-    recommendedFromTier: "LV",
-    automationFromTier: "LV",
-    importance: 5,
-    summary: "A core LV component used in pumps, conveyors, pistons, and many machines.",
-    commonUses: ["LV Electric Pump", "LV Conveyor Module", "LV Electric Piston", "LV machines"],
-    stock: "LV early: 4~8. LV late/MV prep: 16+ or semi-automated.",
-    warnings: ["Assembler and Wiremill make the chain far less annoying."],
-    tags: ["core", "component", "frequent", "calculator"],
-  },
-  {
-    id: "lv_machine_hull",
-    name: "LV Machine Hull",
-    category: "Machine Part",
-    craftableFromTier: "LV",
-    recommendedFromTier: "LV",
-    automationFromTier: "LV",
-    importance: 5,
-    summary: "The body of most LV machines. If you are expanding your base, this becomes a repeated bottleneck.",
-    commonUses: ["LV machines", "Generators", "Machine upgrades"],
-    stock: "LV: prepare several when planning a machine batch.",
-    warnings: ["Plate and cable preparation should be done before mass crafting machines."],
-    tags: ["core", "machine", "frequent"],
-  },
-  {
-    id: "basic_circuit",
-    name: "Basic Circuit",
-    category: "Circuit",
-    craftableFromTier: "LV",
-    recommendedFromTier: "LV",
-    automationFromTier: "LV",
-    importance: 5,
-    summary: "One of the first major circuit bottlenecks. Required by many LV machines and components.",
-    commonUses: ["LV machines", "Electronic Circuit", "Machine components"],
-    stock: "LV: make in batches of 8~16 if materials allow.",
-    warnings: ["Circuit crafting often reveals missing rubber, wires, or plates."],
-    tags: ["core", "circuit", "frequent", "calculator"],
-  },
-  {
-    id: "lv_assembler",
-    name: "LV Assembler",
-    category: "Machine",
-    craftableFromTier: "LV",
-    recommendedFromTier: "LV",
-    automationFromTier: "LV",
-    importance: 5,
-    summary: "A high-priority LV machine because it simplifies many repeated component crafts.",
-    commonUses: ["Motors", "Circuits", "Cables", "Machine components"],
-    stock: "LV: one early assembler is strongly recommended.",
-    warnings: ["Many recipes become more convenient once this is available."],
-    tags: ["core", "machine", "recommended"],
-  },
-  {
-    id: "cupronickel_coil",
-    name: "Cupronickel Coil",
-    category: "EBF Part",
-    craftableFromTier: "LV",
-    recommendedFromTier: "LV",
-    automationFromTier: "MV",
-    importance: 4,
-    summary: "An early coil material for preparing the Electric Blast Furnace path.",
-    commonUses: ["Electric Blast Furnace", "Heating coils"],
-    stock: "LV: prepare when planning EBF construction.",
-    warnings: ["Do not overproduce before checking your exact EBF plan."],
-    tags: ["ebf", "progression"],
-  },
-];
-
-const recipes = [
-  {
-    id: "iron_rod_lathe",
-    output: { itemId: "iron_rod", amount: 2 },
-    inputs: [{ itemId: "iron_ingot", amount: 1 }],
-    machine: "Lathe",
-    tier: "LV",
-    tags: ["easy", "recommended"],
-  },
-  {
-    id: "copper_wire_wiremill",
-    output: { itemId: "copper_wire", amount: 2 },
-    inputs: [{ itemId: "copper_ingot", amount: 1 }],
-    machine: "Wiremill",
-    tier: "LV",
-    tags: ["easy", "recommended"],
-  },
-  {
-    id: "tin_wire_wiremill",
-    output: { itemId: "tin_wire", amount: 2 },
-    inputs: [{ itemId: "tin_ingot", amount: 1 }],
-    machine: "Wiremill",
-    tier: "LV",
-    tags: ["easy", "recommended"],
-  },
-  {
-    id: "tin_cable_basic",
-    output: { itemId: "tin_cable", amount: 1 },
-    inputs: [
-      { itemId: "tin_wire", amount: 1 },
-      { itemId: "rubber", amount: 1 },
-    ],
-    machine: "Assembler",
-    tier: "LV",
-    tags: ["easy", "recommended"],
-  },
-  {
-    id: "magnetic_iron_rod_basic",
-    output: { itemId: "magnetic_iron_rod", amount: 1 },
-    inputs: [{ itemId: "iron_rod", amount: 1 }],
-    machine: "Manual / Polarizer placeholder",
-    tier: "LV",
-    tags: ["placeholder"],
-  },
-  {
-    id: "lv_electric_motor_basic",
-    output: { itemId: "lv_electric_motor", amount: 1 },
-    inputs: [
-      { itemId: "magnetic_iron_rod", amount: 1 },
-      { itemId: "copper_wire", amount: 2 },
-      { itemId: "tin_cable", amount: 2 },
-      { itemId: "iron_rod", amount: 2 },
-    ],
-    machine: "Assembler",
-    tier: "LV",
-    tags: ["easy", "recommended"],
-  },
-  {
-    id: "basic_circuit_placeholder",
-    output: { itemId: "basic_circuit", amount: 1 },
-    inputs: [
-      { itemId: "copper_wire", amount: 4 },
-      { itemId: "rubber", amount: 2 },
-      { itemId: "steel_ingot", amount: 1 },
-    ],
-    machine: "Assembler",
-    tier: "LV",
-    tags: ["placeholder"],
-  },
-];
-
-const rawItems = {
-  iron_ingot: "Iron Ingot",
-  copper_ingot: "Copper Ingot",
-  tin_ingot: "Tin Ingot",
-};
+function cls(...classes) {
+  return classes.filter(Boolean).join(' ')
+}
 
 function getItemName(id) {
-  return items.find((item) => item.id === id)?.name || rawItems[id] || id.replaceAll("_", " ");
-}
-
-function canUseTier(recipeTier, userTier) {
-  return tierRank[recipeTier] <= tierRank[userTier];
-}
-
-function recipeScore(recipe, userMachines) {
-  let score = 0;
-  if (recipe.tags?.includes("recommended")) score -= 10;
-  if (recipe.tags?.includes("placeholder")) score += 6;
-  if (!userMachines.includes(recipe.machine) && !recipe.machine.includes("Manual")) score += 30;
-  return score;
-}
-
-function pickRecipe(itemId, userTier, userMachines) {
-  const candidates = recipes.filter((recipe) => recipe.output.itemId === itemId && canUseTier(recipe.tier, userTier));
-  if (!candidates.length) return null;
-  return [...candidates].sort((a, b) => recipeScore(a, userMachines) - recipeScore(b, userMachines))[0];
+  return items.find((item) => item.id === id)?.name || rawItems[id] || id.replaceAll('_', ' ')
 }
 
 function ceilDiv(a, b) {
-  return Math.ceil(a / b);
+  return Math.ceil(a / b)
 }
 
-function buildTree(itemId, amount, userTier, userMachines, depth = 0, seen = new Set()) {
-  const recipe = pickRecipe(itemId, userTier, userMachines);
+function canUseTier(recipeTier, currentTier) {
+  return tierRank[recipeTier] <= tierRank[currentTier]
+}
+
+function recipeScore(recipe, ownedMachines) {
+  let score = 0
+  if (recipe.tags?.includes('recommended')) score -= 10
+  if (recipe.tags?.includes('placeholder')) score += 7
+  if (!ownedMachines.includes(recipe.machine) && !recipe.machine.includes('Manual')) score += 30
+  return score
+}
+
+function pickRecipe(itemId, currentTier, ownedMachines) {
+  const candidates = recipes.filter((recipe) => recipe.output.itemId === itemId && canUseTier(recipe.tier, currentTier))
+  if (!candidates.length) return null
+  return [...candidates].sort((a, b) => recipeScore(a, ownedMachines) - recipeScore(b, ownedMachines))[0]
+}
+
+function buildTree(itemId, amount, currentTier, ownedMachines, depth = 0, seen = new Set()) {
+  const recipe = pickRecipe(itemId, currentTier, ownedMachines)
   if (!recipe || seen.has(itemId) || depth > 8) {
-    return { itemId, amount, recipe: null, children: [] };
+    return { itemId, amount, recipe: null, children: [] }
   }
 
-  const batches = ceilDiv(amount, recipe.output.amount);
-  const nextSeen = new Set(seen);
-  nextSeen.add(itemId);
+  const batches = ceilDiv(amount, recipe.output.amount)
+  const nextSeen = new Set(seen)
+  nextSeen.add(itemId)
 
   return {
     itemId,
     amount,
     recipe,
-    children: recipe.inputs.map((input) => buildTree(input.itemId, input.amount * batches, userTier, userMachines, depth + 1, nextSeen)),
-  };
+    children: recipe.inputs.map((input) => buildTree(input.itemId, input.amount * batches, currentTier, ownedMachines, depth + 1, nextSeen)),
+  }
 }
 
-function flattenRawMaterials(node, result = {}) {
+function flattenRaw(node, result = {}) {
   if (!node.recipe || node.children.length === 0) {
-    result[node.itemId] = (result[node.itemId] || 0) + node.amount;
-    return result;
+    result[node.itemId] = (result[node.itemId] || 0) + node.amount
+    return result
   }
-  node.children.forEach((child) => flattenRawMaterials(child, result));
-  return result;
+  node.children.forEach((child) => flattenRaw(child, result))
+  return result
 }
 
 function collectMachines(node, result = new Set()) {
-  if (node.recipe?.machine) result.add(node.recipe.machine);
-  node.children?.forEach((child) => collectMachines(child, result));
-  return result;
+  if (node.recipe?.machine) result.add(node.recipe.machine)
+  node.children.forEach((child) => collectMachines(child, result))
+  return result
 }
 
-function TreeNode({ node, level = 0 }) {
-  return (
-    <div className="tree-node">
-      <div className="tree-row" style={{ paddingLeft: `${level * 18}px` }}>
-        <span className="tree-prefix">{level === 0 ? "•" : "└"}</span>
-        <div>
-          <div className="tree-title">
-            {getItemName(node.itemId)} <span>x{node.amount}</span>
-          </div>
-          {node.recipe && (
-            <div className="tree-subtitle">
-              via {node.recipe.machine} · {node.recipe.tier}
-              {node.recipe.tags?.includes("placeholder") ? " · placeholder recipe" : ""}
-            </div>
-          )}
-        </div>
-      </div>
-      {node.children.map((child, index) => (
-        <TreeNode key={`${child.itemId}-${index}-${level}`} node={child} level={level + 1} />
-      ))}
-    </div>
-  );
+function countPlaceholderRecipes(node) {
+  let count = node.recipe?.tags?.includes('placeholder') ? 1 : 0
+  node.children.forEach((child) => {
+    count += countPlaceholderRecipes(child)
+  })
+  return count
+}
+
+function Pill({ children, className }) {
+  return <span className={cls('inline-flex items-center rounded-full border border-zinc-800 bg-zinc-950/80 px-3 py-1 text-xs font-medium text-zinc-300', className)}>{children}</span>
 }
 
 function Stars({ value }) {
   return (
-    <div className="stars">
+    <div className="flex items-center gap-0.5" aria-label={`Importance ${value} out of 5`}>
       {Array.from({ length: 5 }).map((_, index) => (
-        <Star key={index} className={index < value ? "star-on" : "star-off"} />
+        <Star key={index} className={cls('h-4 w-4', index < value ? 'fill-amber-300 text-amber-300' : 'text-zinc-700')} />
       ))}
     </div>
-  );
+  )
 }
 
-function Badge({ children }) {
-  return <span className="badge">{children}</span>;
+function MachineButton({ machine, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cls(
+        'rounded-2xl border px-3 py-2 text-left text-sm transition hover:-translate-y-0.5',
+        active
+          ? 'border-emerald-400/60 bg-emerald-400/10 text-emerald-100 shadow-glow'
+          : 'border-zinc-800 bg-zinc-950/70 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200',
+      )}
+    >
+      <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-current/30 align-middle text-[10px]">
+        {active ? <Check className="h-3 w-3" /> : <CircleDot className="h-3 w-3" />}
+      </span>
+      {machine}
+    </button>
+  )
+}
+
+function ItemCard({ item, selected, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cls(
+        'group w-full rounded-3xl border p-4 text-left transition hover:-translate-y-0.5',
+        selected
+          ? 'border-emerald-400/60 bg-emerald-400/10 shadow-glow'
+          : 'border-zinc-800 bg-zinc-950/70 hover:border-zinc-600',
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="font-semibold text-zinc-100">{item.name}</div>
+          <div className="mt-1 text-xs text-zinc-500">{item.category} · from {item.craftableFromTier}</div>
+        </div>
+        <ChevronRight className="mt-1 h-4 w-4 text-zinc-600 transition group-hover:translate-x-0.5 group-hover:text-zinc-300" />
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <Stars value={item.importance} />
+        <span className="rounded-full bg-zinc-900 px-2 py-1 text-[11px] text-zinc-400">{item.recommendedFromTier}</span>
+      </div>
+    </button>
+  )
+}
+
+function TreeNode({ node, level = 0 }) {
+  return (
+    <div className="text-sm">
+      <div className="flex gap-3 py-2" style={{ paddingLeft: `${level * 18}px` }}>
+        <div className={cls('mt-1 h-5 w-5 shrink-0 rounded-full border', node.recipe ? 'border-emerald-400/50 bg-emerald-400/10' : 'border-zinc-700 bg-zinc-900')} />
+        <div className="min-w-0">
+          <div className="font-medium text-zinc-100">
+            {getItemName(node.itemId)} <span className="text-emerald-300">x{node.amount}</span>
+          </div>
+          {node.recipe ? (
+            <div className="mt-1 text-xs text-zinc-500">
+              via {node.recipe.machine} · {node.recipe.tier}{node.recipe.tags?.includes('placeholder') ? ' · placeholder' : ''}
+            </div>
+          ) : (
+            <div className="mt-1 text-xs text-zinc-600">base material / no route in current dataset</div>
+          )}
+        </div>
+      </div>
+      {node.children.map((child, index) => (
+        <TreeNode key={`${node.itemId}-${child.itemId}-${index}-${level}`} node={child} level={level + 1} />
+      ))}
+    </div>
+  )
 }
 
 function App() {
-  const [query, setQuery] = useState("");
-  const [tier, setTier] = useState("LV");
-  const [selectedMachines, setSelectedMachines] = useState(["Wiremill", "Lathe", "Assembler"]);
-  const [category, setCategory] = useState("All");
-  const [selectedItemId, setSelectedItemId] = useState("lv_electric_motor");
-  const [amount, setAmount] = useState(16);
+  const [query, setQuery] = useState('')
+  const [tier, setTier] = useState('LV')
+  const [category, setCategory] = useState('All')
+  const [ownedMachines, setOwnedMachines] = useState(['Wiremill', 'Lathe', 'Assembler'])
+  const [selectedItemId, setSelectedItemId] = useState('lv_electric_motor')
+  const [amount, setAmount] = useState(16)
 
   useEffect(() => {
-    const saved = localStorage.getItem("gtnh-navigator-settings");
-    if (!saved) return;
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (!saved) return
     try {
-      const parsed = JSON.parse(saved);
-      if (parsed.tier) setTier(parsed.tier);
-      if (Array.isArray(parsed.selectedMachines)) setSelectedMachines(parsed.selectedMachines);
-    } catch {}
-  }, []);
+      const parsed = JSON.parse(saved)
+      if (parsed.tier) setTier(parsed.tier)
+      if (Array.isArray(parsed.ownedMachines)) setOwnedMachines(parsed.ownedMachines)
+      if (parsed.selectedItemId) setSelectedItemId(parsed.selectedItemId)
+      if (parsed.amount) setAmount(parsed.amount)
+    } catch {
+      localStorage.removeItem(STORAGE_KEY)
+    }
+  }, [])
 
   useEffect(() => {
-    localStorage.setItem("gtnh-navigator-settings", JSON.stringify({ tier, selectedMachines }));
-  }, [tier, selectedMachines]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ tier, ownedMachines, selectedItemId, amount }))
+  }, [tier, ownedMachines, selectedItemId, amount])
 
-  const categories = useMemo(() => ["All", ...Array.from(new Set(items.map((item) => item.category)))], []);
+  const categories = useMemo(() => ['All', ...Array.from(new Set(items.map((item) => item.category)))], [])
 
   const filteredItems = useMemo(() => {
+    const q = query.trim().toLowerCase()
     return items
-      .filter((item) => category === "All" || item.category === category)
-      .filter((item) => item.name.toLowerCase().includes(query.toLowerCase()) || item.tags.join(" ").toLowerCase().includes(query.toLowerCase()))
+      .filter((item) => category === 'All' || item.category === category)
+      .filter((item) => !q || item.name.toLowerCase().includes(q) || item.tags.join(' ').toLowerCase().includes(q))
       .filter((item) => tierRank[item.craftableFromTier] <= tierRank[tier] + 1)
-      .sort((a, b) => b.importance - a.importance || tierRank[a.craftableFromTier] - tierRank[b.craftableFromTier]);
-  }, [query, category, tier]);
+      .sort((a, b) => b.importance - a.importance || tierRank[a.craftableFromTier] - tierRank[b.craftableFromTier])
+  }, [category, query, tier])
 
-  const selectedItem = items.find((item) => item.id === selectedItemId) || items[0];
-  const tree = useMemo(() => buildTree(selectedItem.id, Number(amount) || 1, tier, selectedMachines), [selectedItem.id, amount, tier, selectedMachines]);
-  const rawMaterials = useMemo(() => flattenRawMaterials(tree), [tree]);
-  const requiredMachines = useMemo(() => Array.from(collectMachines(tree)), [tree]);
+  const selectedItem = items.find((item) => item.id === selectedItemId) || items[0]
+  const tree = useMemo(() => buildTree(selectedItem.id, Number(amount) || 1, tier, ownedMachines), [selectedItem.id, amount, tier, ownedMachines])
+  const rawMaterials = useMemo(() => flattenRaw(tree), [tree])
+  const machines = useMemo(() => Array.from(collectMachines(tree)), [tree])
+  const placeholderCount = useMemo(() => countPlaceholderRecipes(tree), [tree])
+  const canCraft = tierRank[selectedItem.craftableFromTier] <= tierRank[tier]
 
-  const toggleMachine = (machine) => {
-    setSelectedMachines((prev) => (prev.includes(machine) ? prev.filter((m) => m !== machine) : [...prev, machine]));
-  };
-
-  const canCraftSelected = tierRank[selectedItem.craftableFromTier] <= tierRank[tier];
+  function toggleMachine(machine) {
+    setOwnedMachines((prev) => (prev.includes(machine) ? prev.filter((name) => name !== machine) : [...prev, machine]))
+  }
 
   return (
-    <div className="app">
-      <div className="container">
-        <header className="hero">
-          <div className="hero-inner">
+    <main className="min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+      <div className="pointer-events-none fixed inset-0 -z-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_38%),radial-gradient(circle_at_80%_20%,rgba(59,130,246,0.12),transparent_35%),linear-gradient(to_bottom,#09090b,#050505)]" />
+      <div className="relative z-10 mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
+        <section className="mb-6 rounded-[2rem] border border-zinc-800/90 bg-zinc-950/70 p-6 shadow-2xl shadow-black/40 backdrop-blur">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <div className="eyebrow"><Package size={20} /> GTNH Item Navigator v0.1</div>
-              <h1>Item guide + tier-aware recipe tree</h1>
-              <p>A first playable prototype for Steam~HV progression. The recipe data is intentionally small and editable, so it can later be replaced with exported GTNH recipe JSON.</p>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-200">
+                <Factory className="h-4 w-4" /> GTNH Helper v0.1
+              </div>
+              <h1 className="max-w-4xl text-4xl font-black tracking-tight text-white md:text-6xl">
+                Tier-aware item guide and recipe planner
+              </h1>
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-400 md:text-base">
+                Search key GregTech: New Horizons items, check when they become useful, and generate a small material tree from your current tier and machines.
+              </p>
             </div>
-            <div className="state-card">
-              <div className="section-title"><Settings2 size={16} /> Current state</div>
-              <select value={tier} onChange={(e) => setTier(e.target.value)}>
-                {TIERS.map((tierName) => <option key={tierName}>{tierName}</option>)}
-              </select>
+            <div className="grid gap-3 rounded-3xl border border-zinc-800 bg-zinc-900/70 p-4 sm:grid-cols-2 lg:w-[420px]">
+              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Current tier
+                <select value={tier} onChange={(event) => setTier(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-emerald-400">
+                  {TIERS.map((name) => <option key={name}>{name}</option>)}
+                </select>
+              </label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Target amount
+                <input type="number" min="1" value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-emerald-400" />
+              </label>
             </div>
           </div>
-        </header>
+        </section>
 
-        <div className="layout">
-          <aside className="sidebar">
-            <section className="panel">
-              <div className="section-title"><Search size={16} /> Search items</div>
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="motor, cable, circuit..." />
-              <select value={category} onChange={(e) => setCategory(e.target.value)}>
-                {categories.map((name) => <option key={name}>{name}</option>)}
-              </select>
+        <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
+          <aside className="space-y-6">
+            <section className="rounded-[2rem] border border-zinc-800 bg-zinc-950/70 p-5 shadow-xl shadow-black/20 backdrop-blur">
+              <div className="mb-4 flex items-center gap-2 font-bold">
+                <Search className="h-5 w-5 text-emerald-300" /> Search
+              </div>
+              <div className="space-y-3">
+                <div className="relative">
+                  <PackageSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" />
+                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="motor, cable, circuit..." className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 py-3 pl-10 pr-3 text-sm outline-none transition focus:border-emerald-400" />
+                </div>
+                <select value={category} onChange={(event) => setCategory(event.target.value)} className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-3 text-sm outline-none transition focus:border-emerald-400">
+                  {categories.map((name) => <option key={name}>{name}</option>)}
+                </select>
+              </div>
             </section>
 
-            <section className="panel">
-              <div className="section-title"><Hammer size={16} /> Owned machines</div>
-              <div className="machine-list">
+            <section className="rounded-[2rem] border border-zinc-800 bg-zinc-950/70 p-5 shadow-xl shadow-black/20 backdrop-blur">
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 font-bold"><Hammer className="h-5 w-5 text-emerald-300" /> Machines</div>
+                <span className="text-xs text-zinc-500">{ownedMachines.length} selected</span>
+              </div>
+              <div className="grid gap-2">
                 {MACHINES.map((machine) => (
-                  <button key={machine} onClick={() => toggleMachine(machine)} className={selectedMachines.includes(machine) ? "machine selected" : "machine"}>
-                    {selectedMachines.includes(machine) ? "✓" : "○"} {machine}
-                  </button>
+                  <MachineButton key={machine} machine={machine} active={ownedMachines.includes(machine)} onClick={() => toggleMachine(machine)} />
                 ))}
               </div>
             </section>
 
-            <section className="panel">
-              <div className="section-title row-between"><span><Boxes size={16} /> Items</span><small>{filteredItems.length}</small></div>
-              <div className="item-list">
+            <section className="rounded-[2rem] border border-zinc-800 bg-zinc-950/70 p-5 shadow-xl shadow-black/20 backdrop-blur">
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 font-bold"><Boxes className="h-5 w-5 text-emerald-300" /> Items</div>
+                <span className="text-xs text-zinc-500">{filteredItems.length}</span>
+              </div>
+              <div className="scrollbar-thin max-h-[520px] space-y-3 overflow-y-auto pr-1">
                 {filteredItems.map((item) => (
-                  <button key={item.id} onClick={() => setSelectedItemId(item.id)} className={selectedItemId === item.id ? "item selected" : "item"}>
-                    <div className="item-top">
-                      <div>
-                        <strong>{item.name}</strong>
-                        <small>{item.category} · from {item.craftableFromTier}</small>
-                      </div>
-                      <ChevronRight size={16} />
-                    </div>
-                    <Stars value={item.importance} />
-                  </button>
+                  <ItemCard key={item.id} item={item} selected={item.id === selectedItem.id} onClick={() => setSelectedItemId(item.id)} />
                 ))}
               </div>
             </section>
           </aside>
 
-          <main className="main">
-            <section className="panel detail-panel">
-              <div className="detail-head">
+          <section className="space-y-6">
+            <div className="rounded-[2rem] border border-zinc-800 bg-zinc-950/70 p-6 shadow-xl shadow-black/20 backdrop-blur">
+              <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                 <div>
-                  <div className="badges">
-                    <Badge>{selectedItem.category}</Badge>
-                    <Badge>Craftable: {selectedItem.craftableFromTier}</Badge>
-                    <Badge>Recommended: {selectedItem.recommendedFromTier}</Badge>
-                    <Badge>Automate: {selectedItem.automationFromTier}</Badge>
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    <Pill>{selectedItem.category}</Pill>
+                    <Pill>Craftable: {selectedItem.craftableFromTier}</Pill>
+                    <Pill>Recommended: {selectedItem.recommendedFromTier}</Pill>
+                    <Pill>Automate: {selectedItem.automationFromTier}</Pill>
                   </div>
-                  <h2>{selectedItem.name}</h2>
-                  <p>{selectedItem.summary}</p>
+                  <h2 className="text-3xl font-black tracking-tight text-white md:text-5xl">{selectedItem.name}</h2>
+                  <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-300 md:text-base">{selectedItem.summary}</p>
                 </div>
-                <div className="importance-card">
-                  <small>Importance</small>
+                <div className="min-w-[180px] rounded-3xl border border-zinc-800 bg-zinc-900/70 p-4">
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-500">Importance</div>
                   <Stars value={selectedItem.importance} />
                 </div>
               </div>
 
-              {!canCraftSelected && (
-                <div className="warning">
-                  <AlertTriangle size={20} />
-                  <div>Your selected tier is <b>{tier}</b>, but this item is normally craftable from <b>{selectedItem.craftableFromTier}</b>. The calculator may stop at this item or show missing routes.</div>
+              {!canCraft && (
+                <div className="mt-5 flex gap-3 rounded-3xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                  <div>Your selected tier is <b>{tier}</b>, but this item is normally craftable from <b>{selectedItem.craftableFromTier}</b>.</div>
                 </div>
               )}
 
-              <div className="info-grid">
-                <div className="subpanel">
-                  <h3>Common uses</h3>
-                  <ul>{selectedItem.commonUses.map((use) => <li key={use}>{use}</li>)}</ul>
+              <div className="mt-6 grid gap-4 md:grid-cols-3">
+                <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-4">
+                  <div className="mb-3 flex items-center gap-2 font-bold"><Sparkles className="h-4 w-4 text-emerald-300" /> Common uses</div>
+                  <ul className="space-y-2 text-sm text-zinc-300">
+                    {selectedItem.uses.map((use) => <li key={use}>• {use}</li>)}
+                  </ul>
                 </div>
-                <div className="subpanel">
-                  <h3>Stock / warning notes</h3>
-                  <p>{selectedItem.stock}</p>
-                  <ul>{selectedItem.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+                <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-4">
+                  <div className="mb-3 flex items-center gap-2 font-bold"><ShieldCheck className="h-4 w-4 text-emerald-300" /> Stock plan</div>
+                  <p className="text-sm leading-6 text-zinc-300">{selectedItem.stock}</p>
+                </div>
+                <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-4">
+                  <div className="mb-3 flex items-center gap-2 font-bold"><Info className="h-4 w-4 text-emerald-300" /> Note</div>
+                  <p className="text-sm leading-6 text-zinc-300">{selectedItem.warning}</p>
                 </div>
               </div>
-            </section>
+            </div>
 
-            <section className="calc-layout">
-              <div className="panel">
-                <div className="calc-head">
+            <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+              <div className="rounded-[2rem] border border-zinc-800 bg-zinc-950/70 p-6 shadow-xl shadow-black/20 backdrop-blur">
+                <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <div className="section-title"><TreePine size={16} /> Recipe tree calculator</div>
-                    <p>Uses the current tier and selected machine list to pick a simple available route.</p>
+                    <div className="flex items-center gap-2 font-bold"><GitBranch className="h-5 w-5 text-emerald-300" /> Recipe tree</div>
+                    <p className="mt-2 text-sm text-zinc-500">Chooses a simple route from the current tier and selected machines.</p>
                   </div>
-                  <label>Target amount <input type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} /></label>
+                  {placeholderCount > 0 && <Pill className="border-amber-400/30 bg-amber-400/10 text-amber-100">{placeholderCount} placeholder recipe(s)</Pill>}
                 </div>
-                <div className="subpanel"><TreeNode node={tree} /></div>
+                <div className="rounded-3xl border border-zinc-800 bg-zinc-900/50 p-4">
+                  <TreeNode node={tree} />
+                </div>
               </div>
 
-              <div className="side-results">
-                <div className="panel">
-                  <h3>Total base materials</h3>
-                  <div className="result-list">
+              <div className="space-y-6">
+                <div className="rounded-[2rem] border border-zinc-800 bg-zinc-950/70 p-5 shadow-xl shadow-black/20 backdrop-blur">
+                  <div className="mb-4 flex items-center gap-2 font-bold"><Flame className="h-5 w-5 text-emerald-300" /> Base materials</div>
+                  <div className="space-y-2">
                     {Object.entries(rawMaterials).map(([id, count]) => (
-                      <div key={id} className="result-row"><span>{getItemName(id)}</span><strong>x{count}</strong></div>
+                      <div key={id} className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm">
+                        <span className="text-zinc-300">{getItemName(id)}</span>
+                        <span className="font-bold text-emerald-300">x{count}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="panel">
-                  <h3>Required machines</h3>
-                  <div className="result-list">
-                    {requiredMachines.map((machine) => {
-                      const owned = selectedMachines.includes(machine) || machine.includes("Manual");
-                      return <div key={machine} className={owned ? "machine-needed owned" : "machine-needed missing"}>{owned ? "✓" : "!"} {machine}</div>;
+                <div className="rounded-[2rem] border border-zinc-800 bg-zinc-950/70 p-5 shadow-xl shadow-black/20 backdrop-blur">
+                  <div className="mb-4 flex items-center gap-2 font-bold"><Settings2 className="h-5 w-5 text-emerald-300" /> Required machines</div>
+                  <div className="space-y-2">
+                    {machines.length === 0 ? <div className="text-sm text-zinc-500">No recipe route in current dataset.</div> : machines.map((machine) => {
+                      const owned = ownedMachines.includes(machine) || machine.includes('Manual')
+                      return (
+                        <div key={machine} className={cls('rounded-2xl border px-3 py-2 text-sm', owned ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100' : 'border-amber-400/30 bg-amber-400/10 text-amber-100')}>
+                          {owned ? '✓' : '!'} {machine}
+                        </div>
+                      )
                     })}
                   </div>
                 </div>
-
-                <div className="panel note">
-                  <div className="section-title"><Save size={16} /> Prototype notes</div>
-                  <p>Current tier and machine choices are saved in LocalStorage. Some recipes are placeholders, so replace them with verified GTNH recipes before treating numbers as authoritative.</p>
-                </div>
               </div>
-            </section>
-          </main>
+            </div>
+          </section>
         </div>
       </div>
-    </div>
-  );
+    </main>
+  )
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById('root')).render(<App />)

@@ -1,32 +1,33 @@
-# GTNH Item Navigator v0.1
+# GTNH Helper
 
-A small Vite + React prototype for a GTNH item guide and tier-aware recipe tree calculator.
+A Vite + React + Tailwind prototype for a GregTech: New Horizons helper web app.
 
-This ZIP is already configured for GitHub Pages deployment with GitHub Actions.
-
-## Upload-only GitHub Pages setup
-
-1. Create a new GitHub repository.
-2. Upload all files in this folder to the repository.
-3. Commit to the `main` branch.
-4. Go to **Settings → Pages**.
-5. Under **Build and deployment**, set **Source** to **GitHub Actions**.
-6. Go to the **Actions** tab and wait for **Deploy to GitHub Pages** to finish.
-7. Open the Pages URL shown in **Settings → Pages**.
-
-The project uses `base: './'` in `vite.config.js`, so it should work regardless of your repository name.
-
-## Local run
+## Local development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Then open the local URL shown in the terminal, usually `http://localhost:5173`.
+## Build
 
-## Notes
+```bash
+npm run build
+npm run preview
+```
 
-- Data is currently embedded in `src/main.jsx` for quick prototyping.
-- Some recipes are placeholders and should be replaced with verified GTNH recipes before use as an authoritative calculator.
-- Current tier and selected machines are saved with LocalStorage.
+## GitHub Pages deployment
+
+This repository includes `.github/workflows/deploy.yml`.
+
+1. Push the whole project to the `main` branch.
+2. Open the repository on GitHub.
+3. Go to **Settings → Pages**.
+4. Set **Build and deployment → Source** to **GitHub Actions**.
+5. Open the **Actions** tab and wait for `Deploy to GitHub Pages` to succeed.
+
+The Vite `base` option is set to `./`, so the app should work even if the repository name changes.
+
+## Current limitations
+
+Some recipe entries are placeholders. Treat the calculator as a UI/data-structure prototype until the recipe data is verified against your GTNH pack version.
